@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🧠 Sellerpintar - Fullstack Project (sp_fs_Pangdam_Setiawan)
 
-## Getting Started
+Ini adalah hasil pengerjaan **Tes Fullstack Developer - Sellerpintar** oleh **Pangdam Setiawan**.
 
-First, run the development server:
+## 🚀 Fitur Utama
+
+✅ Login dan Register menggunakan token JWT  
+✅ CRUD Proyek  
+✅ CRUD Task (To Do / In Progress / Done)  
+✅ Drag & Drop Task (Kanban-style)  
+✅ Menambahkan Anggota ke Proyek (dengan validasi & autocomplete email)  
+✅ Menampilkan Daftar Anggota Proyek  
+✅ Menampilkan Statistik Task dalam bentuk Chart  
+✅ Menampilkan Assignee pada Card Task  
+✅ Semua fitur memiliki autentikasi (berbasis token)
+
+---
+
+## 🛠️ Teknologi
+
+- Next.js 14 (App Router + API Route)
+- TypeScript
+- TailwindCSS + shadcn/ui
+- Prisma ORM + SQLite
+- JWT untuk autentikasi
+- Chart.js untuk statistik
+- DnD Drag & Drop native
+- Database: **SQLite (dev)** 
+
+---
+
+## 📦 Struktur Direktori
+
+├── prisma/
+│ └── schema.prisma # Skema database (User, Project, Task, Membership)
+│
+├── src/
+│ ├── app/
+│ │ ├── api/ # API routes (projects, tasks, auth, members)
+│ │ ├── login/ # Halaman login
+│ │ ├── register/ # Halaman register
+│ │ └── projects/ # Halaman project dan task board
+│ │
+│ └── components/ # UI Components (shadcn/ui based)
+│
+├── .env # Variabel lingkungan lokal
+├── .env.example # Template env
+├── README.md
+└── package.json
+
+
+---
+
+## ⚙️ Setup Lokal
 
 ```bash
+git clone https://github.com/pangdamsetiawan/-sp_fs_-Pangdam-Setiawan-.git
+cd -sp_fs_-Pangdam-Setiawan-
+
+# Install dependencies
+npm install
+
+# Copy file .env.example ke .env
+cp .env.example .env
+
+# Setup database
+npx prisma migrate dev --name init
+
+# Jalankan server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🧪 Catatan Tambahan
+Backend tidak dideploy, namun bisa dijalankan secara lokal.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Frontend terhubung langsung ke backend lokal.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Untuk login & register, token JWT disimpan di cookie.
 
-## Learn More
+💡 Penutup
 
-To learn more about Next.js, take a look at the following resources:
+Terima kasih atas kesempatan mengikuti tes ini.
+Apabila ada pertanyaan lanjutan, saya siap untuk menjawab.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Nama: Pangdam Setiawan
+Email: pangdamsetiawan09@gmail.com
+Github: https://github.com/pangdamsetiawan

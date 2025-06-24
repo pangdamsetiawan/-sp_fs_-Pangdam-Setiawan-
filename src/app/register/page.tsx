@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation'; // Import useRouter
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,13 +13,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-export default function LoginPage() {
+import Link from 'next/link';
+export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter(); // Inisialisasi router
+  const router = useRouter();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -27,22 +27,22 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Something went wrong');
+      if (!res.ok) throw new Error(data.message || 'Gagal registrasi');
 
-      // Jika berhasil, redirect ke dashboard
+      // Setelah berhasil register, redirect ke dashboard
       router.push('/dashboard');
-
     } catch (error: unknown) {
       if (error instanceof Error) {
         setError(error.message);
       } else {
-        setError('An unexpected error occurred.');
+        setError('Terjadi kesalahan tidak terduga.');
       }
     } finally {
       setIsLoading(false);
@@ -50,13 +50,12 @@ export default function LoginPage() {
   };
 
   return (
-    // ... JSX Anda tetap sama persis seperti sebelumnya ...
     <main className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
+          <CardTitle className="text-2xl">Register</CardTitle>
           <CardDescription>
-            Masukkan email dan password Anda untuk masuk ke akun Anda.
+            Buat akun baru dengan email dan password.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -64,7 +63,11 @@ export default function LoginPage() {
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
-                id="email" type="email" placeholder="m@example.com" required
+                id="email"
+                type="email"
+                placeholder="m@example.com"
+                autoComplete="email"
+                required
                 value={email}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               />
@@ -72,20 +75,22 @@ export default function LoginPage() {
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
               <Input
-                id="password" type="password" required
+                id="password"
+                type="password"
+                autoComplete="new-password"
+                required
                 value={password}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               />
             </div>
-            <p className="text-sm mt-2">
-            Belum punya akun? <a href="/register" className="text-blue-600 hover:underline">Daftar sekarang</a>
+            <p className="text-sm mt-2">Sudah punya akun?{' '}
+            <Link href="/" className="text-blue-600 hover:underline">Login di sini</Link>
             </p>
-
           </CardContent>
           <CardFooter className="flex-col items-start w-full">
             {error && <p className="text-sm font-medium text-destructive">{error}</p>}
             <Button type="submit" className="w-full mt-2" disabled={isLoading}>
-              {isLoading ? 'Loading...' : 'Masuk'}
+              {isLoading ? 'Loading...' : 'Daftar'}
             </Button>
           </CardFooter>
         </form>
