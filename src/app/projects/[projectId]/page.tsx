@@ -204,29 +204,7 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const res = await fetch(`/api/projects/${projectId}/export`);
-      if (!res.ok) throw new Error('Gagal mengekspor proyek');
 
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-
-      const contentDisposition = res.headers.get('Content-Disposition');
-      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
-      const filename = filenameMatch?.[1] || 'export.json';
-
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Terjadi kesalahan saat ekspor');
-    }
-  };
 
   if (isLoading) return <div className="p-8">Memuat papan tugas...</div>;
   if (error) return <div className="p-8 text-red-500">Error: {error}</div>;
@@ -243,9 +221,6 @@ export default function ProjectDetailPage() {
           </Button>
           <Button variant="outline" size="sm" asChild>
             <a href={`/projects/${projectId}/settings`}>⚙️ Pengaturan</a>
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            📤 Ekspor
           </Button>
           <Button variant="outline" size="sm" asChild>
           <Link href="/">← Kembali ke Dashboard</Link>
