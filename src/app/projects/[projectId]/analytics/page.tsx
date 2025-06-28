@@ -1,12 +1,14 @@
+// Lokasi: src/app/projects/[projectId]/analytics/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link'; // ✅ Tambahkan ini
+import Link from 'next/link'; // Import Link untuk navigasi
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button'; // ✅ Untuk tombol kembali
+import { Button } from '@/components/ui/button'; // Import Button
+import { ArrowLeft } from 'lucide-react'; // Import ikon (pastikan lucide-react terinstal)
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -21,25 +23,27 @@ export default function ProjectAnalyticsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTasks = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/projects/${projectId}/tasks`);
-      if (!res.ok) throw new Error('Gagal memuat data tugas');
-
-      const data = await res.json();
-      setTasks(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (projectId) fetchTasks();
-  }, [projectId]);
+    // Definisikan fungsi fetch di dalam useEffect
+    const fetchTasks = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/projects/${projectId}/tasks`);
+        if (!res.ok) throw new Error('Gagal memuat data tugas');
+        const data = await res.json();
+        setTasks(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (projectId) {
+      fetchTasks();
+    }
+  }, [projectId]); // Hanya projectId yang menjadi dependensi
 
   const statusCount = {
     todo: tasks.filter(t => t.status === 'todo').length,
@@ -53,22 +57,23 @@ export default function ProjectAnalyticsPage() {
       {
         data: [statusCount.todo, statusCount.inProgress, statusCount.done],
         backgroundColor: ['#facc15', '#38bdf8', '#4ade80'],
-        borderColor: '#fff',
-        borderWidth: 1,
+        borderColor: '#1e293b', // Warna border gelap agar terlihat
+        borderWidth: 2,
       },
     ],
   };
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      {/* ✅ Tombol kembali */}
-      <div className="mb-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/projects/${projectId}`}>← Kembali ke Proyek</Link>
-        </Button>
+      {/* ++ TOMBOL KEMBALI DAN JUDUL ++ */}
+      <div className="flex items-center gap-4 mb-4">
+        <Link href={`/projects/${projectId}`}>
+          <Button variant="outline" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <h1 className="text-2xl font-bold">📊 Statistik Tugas Proyek</h1>
       </div>
-
-      <h1 className="text-2xl font-bold mb-4">📊 Statistik Tugas Proyek</h1>
 
       {isLoading ? (
         <p>Memuat data...</p>
@@ -80,9 +85,11 @@ export default function ProjectAnalyticsPage() {
             <CardTitle>Distribusi Status Tugas</CardTitle>
           </CardHeader>
           <CardContent>
-            <Pie data={chartData} />
-            <div className="mt-4 text-sm text-muted-foreground">
-              <ul className="list-disc list-inside">
+            <div className="w-full max-w-xs mx-auto">
+              <Pie data={chartData} />
+            </div>
+            <div className="mt-6 text-sm text-muted-foreground">
+              <ul className="list-disc list-inside space-y-2">
                 <li>📝 To Do: {statusCount.todo}</li>
                 <li>⏳ In Progress: {statusCount.inProgress}</li>
                 <li>✅ Done: {statusCount.done}</li>

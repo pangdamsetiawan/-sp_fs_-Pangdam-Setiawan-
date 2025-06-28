@@ -1,5 +1,5 @@
 // Lokasi: src/app/api/projects/[projectId]/export/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
@@ -19,8 +19,9 @@ async function getUserIdFromToken() {
   }
 }
 
+// PERBAIKAN: Menggunakan destructuring { params } langsung di argumen fungsi
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
   try {
@@ -31,7 +32,6 @@ export async function GET(
 
     const { projectId } = params;
 
-    // Otorisasi: Pastikan user adalah anggota proyek
     const membership = await prisma.membership.findFirst({
       where: { userId, projectId },
     });
@@ -39,22 +39,17 @@ export async function GET(
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
-    // Ambil semua data terkait proyek dalam satu query
     const projectData = await prisma.project.findUnique({
       where: { id: projectId },
       include: {
-        tasks: { // Sertakan semua tugas
+        tasks: {
           include: {
-            assignee: { // Sertakan data assignee untuk setiap tugas
-              select: { id: true, email: true },
-            },
+            assignee: { select: { id: true, email: true } },
           },
         },
-        memberships: { // Sertakan semua keanggotaan
+        memberships: {
           include: {
-            user: { // Sertakan data user untuk setiap anggota
-              select: { id: true, email: true },
-            },
+            user: { select: { id: true, email: true } },
           },
         },
       },
@@ -64,10 +59,8 @@ export async function GET(
       return NextResponse.json({ message: 'Proyek tidak ditemukan' }, { status: 404 });
     }
 
-    // Buat nama file yang dinamis
     const fileName = `project_${projectData.name.replace(/\s+/g, '_')}_${new Date().toISOString()}.json`;
 
-    // Kirim data sebagai file JSON yang akan diunduh
     return new NextResponse(JSON.stringify(projectData, null, 2), {
       status: 200,
       headers: {
