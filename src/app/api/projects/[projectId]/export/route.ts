@@ -7,30 +7,22 @@ import { cookies } from 'next/headers';
 const prisma = new PrismaClient();
 
 async function getUserIdFromToken() {
+  const cookieStore = await cookies();
+  const tokenCookie = cookieStore.get('token');
+  if (!tokenCookie) return null;
   try {
-    const cookieStore = await cookies();
-    const tokenCookie = cookieStore.get('token');
-    if (!tokenCookie) return null;
-
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(tokenCookie.value, secret);
     return payload.userId as string;
-  } catch (error) {
-    console.error('Failed to verify token:', error);
+  } catch {
     return null;
   }
 }
 
-// PERBAIKAN: Mendefinisikan tipe untuk argumen kedua secara eksplisit
-type RouteContext = {
-  params: {
-    projectId: string;
-  };
-};
-
+// PERBAIKAN FINAL: Menggunakan destructuring { params } langsung di argumen fungsi
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: { projectId: string } }
 ) {
   try {
     const userId = await getUserIdFromToken();
@@ -38,8 +30,7 @@ export async function GET(
       return NextResponse.json({ message: 'Authentication failed' }, { status: 401 });
     }
 
-    // Menggunakan projectId dari context yang sudah diberi tipe
-    const { projectId } = context.params;
+    const { projectId } = params;
 
     const membership = await prisma.membership.findFirst({
       where: { userId, projectId },
@@ -78,8 +69,7 @@ export async function GET(
       },
     });
 
-  } catch (error) {
-    console.error('EXPORT_ERROR:', error);
+  } catch {
     return NextResponse.json({ message: 'Gagal mengekspor data proyek' }, { status: 500 });
   }
 }
