@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect, type FormEvent, type ChangeEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react'; // Import ikon ArrowLeft
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 
-// Komponen UI dari Shadcn
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,19 +22,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-
-
-// Tipe data
+import Link from 'next/link'; // Tambahkan di paling atas
 type Project = { id: string; name: string };
 type Task = {
   id: string;
@@ -41,20 +32,35 @@ type Task = {
   assignee?: { id: string; email: string } | null;
 };
 
-// Komponen Kartu Tugas
-function TaskCard({ task, onEdit, onDeleteTrigger }: { task: Task, onEdit: (task: Task) => void, onDeleteTrigger: (task: Task) => void }) {
+function TaskCard({
+  task,
+  onEdit,
+  onDelete,
+}: {
+  task: Task;
+  onEdit: (task: Task) => void;
+  onDelete: (id: string) => void;
+}) {
   return (
     <div
-      className="p-4 bg-background rounded-lg border shadow-sm mb-2 cursor-grab active:cursor-grabbing"
+      className="p-4 bg-card rounded-lg border shadow-sm mb-2 cursor-grab"
       draggable
       onDragStart={(e) => e.dataTransfer.setData('taskId', task.id)}
     >
       <h3 className="font-semibold">{task.title}</h3>
-      {task.description && <p className="text-sm text-muted-foreground mt-1">{task.description}</p>}
-      {task.assignee?.email && <p className="text-sm text-muted-foreground mt-1">👤 {task.assignee.email}</p>}
+      {task.description && (
+        <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+      )}
+      {task.assignee?.email && (
+        <p className="text-sm text-muted-foreground mt-1">👤 {task.assignee.email}</p>
+      )}
       <div className="flex gap-2 mt-3">
-        <button onClick={() => onEdit(task)} className="text-sm text-blue-600 hover:underline">Edit</button>
-        <button onClick={() => onDeleteTrigger(task)} className="text-sm text-red-600 hover:underline">Delete</button>
+        <button onClick={() => onEdit(task)} className="text-sm text-blue-600 hover:underline">
+          Edit
+        </button>
+        <button onClick={() => onDelete(task.id)} className="text-sm text-red-600 hover:underline">
+          Delete
+        </button>
       </div>
     </div>
   );
@@ -68,154 +74,182 @@ export default function ProjectDetailPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // State untuk dialog dan form
-  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [newTask, setNewTask] = useState({ title: '', description: ''});
-  const [editTask, setEditTask] = useState<Task | null>(null);
-  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
 
-  const fetchProjectData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const [projectRes, tasksRes] = await Promise.all([
-        fetch(`/api/projects/${projectId}`),
-        fetch(`/api/projects/${projectId}/tasks`),
-      ]);
-      if (!projectRes.ok) throw new Error('Gagal memuat proyek');
-      if (!tasksRes.ok) throw new Error('Gagal memuat tugas');
-      const projectData = await projectRes.json();
-      const tasksData = await tasksRes.json();
-      setProject(projectData);
-      setTasks(tasksData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
-    } finally {
-      setIsLoading(false);
-    }
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  const statusLabels = {
+    todo: '📝 To Do',
+    'in-progress': '⏳ In Progress',
+    done: '✅ Done',
   };
 
+  const statuses = ['todo', 'in-progress', 'done'];
+
   useEffect(() => {
-    if (projectId) fetchProjectData();
+    const fetchData = async () => {
+      try {
+        setError(null);
+        setIsLoading(true);
+
+        const [projectRes, tasksRes] = await Promise.all([
+          fetch(`/api/projects/${projectId}`),
+          fetch(`/api/projects/${projectId}/tasks`),
+        ]);
+
+        if (!projectRes.ok) throw new Error('Gagal memuat proyek');
+        if (!tasksRes.ok) throw new Error('Gagal memuat tugas');
+
+        const projectData = await projectRes.json();
+        const tasksData = await tasksRes.json();
+
+        setProject(projectData);
+        setTasks(tasksData);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (projectId) fetchData();
   }, [projectId]);
+
+  const refetch = async () => {
+    const [projectRes, tasksRes] = await Promise.all([
+      fetch(`/api/projects/${projectId}`),
+      fetch(`/api/projects/${projectId}/tasks`),
+    ]);
+    setProject(await projectRes.json());
+    setTasks(await tasksRes.json());
+  };
 
   const handleCreateTask = async (e: FormEvent) => {
     e.preventDefault();
-    if (!newTask.title.trim()) return;
+    if (!newTaskTitle.trim()) return;
+
     try {
-      await fetch(`/api/projects/${projectId}/tasks`, {
+      const res = await fetch(`/api/projects/${projectId}/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newTask, status: 'todo' }),
+        body: JSON.stringify({
+          title: newTaskTitle,
+          description: newTaskDescription,
+          status: 'todo',
+        }),
       });
-      setNewTask({ title: '', description: '' });
+
+      if (!res.ok) throw new Error('Gagal menambahkan task');
+
+      setNewTaskTitle('');
+      setNewTaskDescription('');
       setIsTaskDialogOpen(false);
-      await fetchProjectData();
-    } catch (err) {
+      await refetch();
+    } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Terjadi kesalahan');
     }
+  };
+
+  const handleDeleteTask = async (id: string) => {
+    if (!confirm('Yakin ingin menghapus task ini?')) return;
+    await fetch(`/api/projects/${projectId}/tasks/${id}`, { method: 'DELETE' });
+    await refetch();
   };
 
   const handleEditTaskSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!editTask) return;
+
     const res = await fetch(`/api/projects/${projectId}/tasks/${editTask.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: editTask.title, description: editTask.description, status: editTask.status }),
+      body: JSON.stringify({
+        title: editTask.title,
+        description: editTask.description,
+        status: editTask.status,
+      }),
     });
+
     if (res.ok) {
       setIsEditDialogOpen(false);
       setEditTask(null);
-      await fetchProjectData();
+      await refetch();
     } else {
       alert('Gagal memperbarui task');
     }
-  };
-  
-  const handleDeleteTask = async () => {
-    if (!taskToDelete) return;
-    await fetch(`/api/projects/${projectId}/tasks/${taskToDelete.id}`, { method: 'DELETE' });
-    setTaskToDelete(null);
-    await fetchProjectData();
   };
 
   const handleDrop = async (e: React.DragEvent, newStatus: string) => {
     const taskId = e.dataTransfer.getData('taskId');
     const task = tasks.find(t => t.id === taskId);
     if (!task || task.status === newStatus) return;
+
     try {
-      await fetch(`/api/projects/${projectId}/tasks/${taskId}`, {
+      const res = await fetch(`/api/projects/${projectId}/tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-      await fetchProjectData();
+
+      if (!res.ok) throw new Error('Gagal memindahkan task');
+      await refetch();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Terjadi kesalahan');
     }
   };
 
   const handleExport = async () => {
-    setIsExporting(true);
     try {
-        const response = await fetch(`/api/projects/${projectId}/export`);
-        if (!response.ok) throw new Error('Gagal mengekspor data');
-        const blob = await response.blob();
-        const contentDisposition = response.headers.get('content-disposition');
-        let fileName = 'project-export.json';
-        if (contentDisposition) {
-            const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
-            if (fileNameMatch && fileNameMatch.length === 2) fileName = fileNameMatch[1];
-        }
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-    } catch (err) {
-        alert(err instanceof Error ? err.message : 'Terjadi kesalahan saat ekspor');
-    } finally {
-        setIsExporting(false);
+      const res = await fetch(`/api/projects/${projectId}/export`);
+      if (!res.ok) throw new Error('Gagal mengekspor proyek');
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+
+      const contentDisposition = res.headers.get('Content-Disposition');
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch?.[1] || 'export.json';
+
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Terjadi kesalahan saat ekspor');
     }
   };
-
-  const statusLabels = { todo: '📝 To Do', 'in-progress': '⏳ In Progress', done: '✅ Done' };
-  const statuses = ['todo', 'in-progress', 'done'];
 
   if (isLoading) return <div className="p-8">Memuat papan tugas...</div>;
   if (error) return <div className="p-8 text-red-500">Error: {error}</div>;
 
   return (
+    
     <div className="p-8 max-w-7xl mx-auto">
-      {/* ++ HEADER DENGAN TOMBOL KEMBALI (DIPERBARUI) ++ */}
-      <div className="flex items-center gap-4 mb-2">
-        <Link href="/dashboard">
-          <Button variant="outline" size="icon">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <h1 className="text-3xl font-bold">{project?.name || 'Detail Proyek'}</h1>
-      </div>
-
+      <h1 className="text-3xl font-bold">{project?.name || 'Detail Proyek'}</h1>
       <div className="flex items-center justify-between mb-6">
         <p className="text-muted-foreground">Kelola semua tugas Anda di sini.</p>
         <div className="flex gap-2">
-           <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
-            {isExporting ? 'Mengekspor...' : '📥 Ekspor'}
-           </Button>
-           <Button variant="outline" size="sm" asChild>
-             <Link href={`/projects/${projectId}/analytics`}>📊 Statistik</Link>
-           </Button>
-           <Button variant="outline" size="sm" asChild>
-             <Link href={`/projects/${projectId}/settings`}>⚙️ Pengaturan</Link>
-           </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href={`/projects/${projectId}/analytics`}>📊 Statistik</a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href={`/projects/${projectId}/settings`}>⚙️ Pengaturan</a>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            📤 Ekspor
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+          <Link href="/">← Kembali ke Dashboard</Link>
+          </Button>
         </div>
       </div>
 
