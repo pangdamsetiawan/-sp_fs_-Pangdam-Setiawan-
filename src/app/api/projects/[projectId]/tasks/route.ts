@@ -1,5 +1,5 @@
 // Lokasi: src/app/api/projects/[projectId]/tasks/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
@@ -21,10 +21,10 @@ async function getUserIdFromToken() {
   }
 }
 
-// Fungsi GET untuk mengambil semua tugas dalam sebuah proyek
 // ✅ GET: Ambil semua task di proyek (termasuk assignee)
 export async function GET(
-  request: Request,
+  request: NextRequest,
+  // PERBAIKAN: Menggunakan destructuring { params } sebagai argumen kedua
   { params }: { params: { projectId: string } }
 ) {
   try {
@@ -33,7 +33,7 @@ export async function GET(
       return NextResponse.json({ message: 'Authentication failed' }, { status: 401 });
     }
 
-    const { projectId } = params;
+    const { projectId } = params; // Langsung gunakan `params`
 
     const membership = await prisma.membership.findFirst({
       where: { userId, projectId },
@@ -66,7 +66,8 @@ export async function GET(
 
 // ✅ POST: Buat task baru (dengan assignee optional)
 export async function POST(
-  request: Request,
+  request: NextRequest,
+  // PERBAIKAN: Menggunakan destructuring { params } sebagai argumen kedua
   { params }: { params: { projectId: string } }
 ) {
   try {
@@ -75,7 +76,7 @@ export async function POST(
       return NextResponse.json({ message: 'Authentication failed' }, { status: 401 });
     }
 
-    const { projectId } = params;
+    const { projectId } = params; // Langsung gunakan `params`
 
     const membership = await prisma.membership.findFirst({
       where: { userId, projectId },

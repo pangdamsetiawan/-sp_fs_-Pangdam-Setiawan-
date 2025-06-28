@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link'; // ✅ Tambahkan ini
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button'; // ✅ Untuk tombol kembali
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -59,6 +61,13 @@ export default function ProjectAnalyticsPage() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
+      {/* ✅ Tombol kembali */}
+      <div className="mb-4">
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/projects/${projectId}`}>← Kembali ke Proyek</Link>
+        </Button>
+      </div>
+
       <h1 className="text-2xl font-bold mb-4">📊 Statistik Tugas Proyek</h1>
 
       {isLoading ? (

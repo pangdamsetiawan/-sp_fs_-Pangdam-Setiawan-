@@ -22,6 +22,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import Link from 'next/link'; 
 
 type Project = { id: string; name: string };
 type Task = {
@@ -82,34 +83,53 @@ export default function ProjectDetailPage() {
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const fetchProjects = async () => {
-    try {
-      setError(null);
-      setIsLoading(true);
+  const sensors = useSensors(useSensor(PointerSensor));
 
-      const [projectRes, tasksRes] = await Promise.all([
-        fetch(`/api/projects/${projectId}`),
-        fetch(`/api/projects/${projectId}/tasks`),
-      ]);
-
-      if (!projectRes.ok) throw new Error('Gagal memuat proyek');
-      if (!tasksRes.ok) throw new Error('Gagal memuat tugas');
-
-      const projectData = await projectRes.json();
-      const tasksData = await tasksRes.json();
-
-      setProject(projectData);
-      setTasks(tasksData);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
-    } finally {
-      setIsLoading(false);
-    }
+  const statusLabels = {
+    todo: '📝 To Do',
+    'in-progress': '⏳ In Progress',
+    done: '✅ Done',
   };
 
+  const statuses = ['todo', 'in-progress', 'done'];
+
   useEffect(() => {
-    if (projectId) fetchProjects();
+    const fetchData = async () => {
+      try {
+        setError(null);
+        setIsLoading(true);
+
+        const [projectRes, tasksRes] = await Promise.all([
+          fetch(`/api/projects/${projectId}`),
+          fetch(`/api/projects/${projectId}/tasks`),
+        ]);
+
+        if (!projectRes.ok) throw new Error('Gagal memuat proyek');
+        if (!tasksRes.ok) throw new Error('Gagal memuat tugas');
+
+        const projectData = await projectRes.json();
+        const tasksData = await tasksRes.json();
+
+        setProject(projectData);
+        setTasks(tasksData);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (projectId) fetchData();
   }, [projectId]);
+
+  const refetch = async () => {
+    const [projectRes, tasksRes] = await Promise.all([
+      fetch(`/api/projects/${projectId}`),
+      fetch(`/api/projects/${projectId}/tasks`),
+    ]);
+    setProject(await projectRes.json());
+    setTasks(await tasksRes.json());
+  };
 
   const handleCreateTask = async (e: FormEvent) => {
     e.preventDefault();
@@ -131,7 +151,7 @@ export default function ProjectDetailPage() {
       setNewTaskTitle('');
       setNewTaskDescription('');
       setIsTaskDialogOpen(false);
-      await fetchProjects();
+      await refetch();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Terjadi kesalahan');
     }
@@ -140,7 +160,7 @@ export default function ProjectDetailPage() {
   const handleDeleteTask = async (id: string) => {
     if (!confirm('Yakin ingin menghapus task ini?')) return;
     await fetch(`/api/projects/${projectId}/tasks/${id}`, { method: 'DELETE' });
-    await fetchProjects();
+    await refetch();
   };
 
   const handleEditTaskSubmit = async (e: FormEvent) => {
@@ -160,7 +180,7 @@ export default function ProjectDetailPage() {
     if (res.ok) {
       setIsEditDialogOpen(false);
       setEditTask(null);
-      await fetchProjects();
+      await refetch();
     } else {
       alert('Gagal memperbarui task');
     }
@@ -179,40 +199,60 @@ export default function ProjectDetailPage() {
       });
 
       if (!res.ok) throw new Error('Gagal memindahkan task');
-      await fetchProjects();
+      await refetch();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Terjadi kesalahan');
     }
   };
 
-  const sensors = useSensors(useSensor(PointerSensor));
+  const handleExport = async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/export`);
+      if (!res.ok) throw new Error('Gagal mengekspor proyek');
 
-  const statusLabels = {
-    todo: '📝 To Do',
-    'in-progress': '⏳ In Progress',
-    done: '✅ Done',
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+
+      const contentDisposition = res.headers.get('Content-Disposition');
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch?.[1] || 'export.json';
+
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Terjadi kesalahan saat ekspor');
+    }
   };
-
-  const statuses = ['todo', 'in-progress', 'done'];
 
   if (isLoading) return <div className="p-8">Memuat papan tugas...</div>;
   if (error) return <div className="p-8 text-red-500">Error: {error}</div>;
 
   return (
+    
     <div className="p-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold">{project?.name || 'Detail Proyek'}</h1>
-
-<div className="flex items-center justify-between mb-6">
-  <p className="text-muted-foreground">Kelola semua tugas Anda di sini.</p>
-  <div className="flex gap-2">
-    <Button variant="outline" size="sm" asChild>
-      <a href={`/projects/${projectId}/analytics`}>📊 Statistik</a>
-    </Button>
-    <Button variant="outline" size="sm" asChild>
-      <a href={`/projects/${projectId}/settings`}>⚙️ Pengaturan</a>
-    </Button>
-  </div>
-</div>
+      <div className="flex items-center justify-between mb-6">
+        <p className="text-muted-foreground">Kelola semua tugas Anda di sini.</p>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <a href={`/projects/${projectId}/analytics`}>📊 Statistik</a>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <a href={`/projects/${projectId}/settings`}>⚙️ Pengaturan</a>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            📤 Ekspor
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+          <Link href="/dashboard">← Kembali ke Dashboard</Link>
+          </Button>
+        </div>
+      </div>
 
       {/* Tambah Task Dialog */}
       <Dialog open={isTaskDialogOpen} onOpenChange={setIsTaskDialogOpen}>
@@ -285,7 +325,7 @@ export default function ProjectDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Kanban Board (Drag & Drop) */}
+      {/* Kanban Board */}
       <DndContext sensors={sensors}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {statuses.map(status => (

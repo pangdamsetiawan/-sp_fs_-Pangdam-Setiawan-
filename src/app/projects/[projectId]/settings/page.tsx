@@ -3,6 +3,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import { debounce } from 'lodash';
+import Link from 'next/link'; // ✅ Tambahkan ini
+
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -99,6 +101,13 @@ export default function ProjectSettingsPage() {
 
   return (
     <div className="p-8 max-w-xl mx-auto">
+      {/* ✅ Tombol Kembali */}
+      <div className="mb-4">
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/projects/${projectId}`}>← Kembali ke Proyek</Link>
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Pengaturan Proyek</CardTitle>
